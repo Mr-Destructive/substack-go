@@ -1,13 +1,13 @@
-package substack
+package main
 
 import (
-	"github.com/mr-destructive/substack-go"
 	"fmt"
+	substack "github.com/mr-destructive/substack-go"
 	"log"
 )
 
 func main() {
-	env, err := loadEnv(".env")
+	env, err := substack.loadEnv(".env")
 	email := env["EMAIL"]
 	password := env["PASSWORD"]
 	publicationURL := "https://meetgor.substack.com"
