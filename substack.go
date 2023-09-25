@@ -152,7 +152,16 @@ func NewApi(email, password, publicationURL string) (*Api, error) {
 	api.publicationURL = urljoin(publicationURL, "api/v1")
 
 	if email != "" && password != "" {
-		err := api.login(email, password)
+		env, err := loadEnv(".env")
+		if err != nil {
+			fmt.Println("Unable to load .env file")
+			env = make(map[string]string)
+			env["EMAIL"] = ""
+			env["PASSWORD"] = ""
+		}
+		email := env["EMAIL"]
+		password := env["PASSWORD"]
+		err = api.login(email, password)
 		if err != nil {
 			return nil, err
 		}
@@ -185,7 +194,7 @@ func (api *Api) handleResponse(response *http.Response, result interface{}) erro
 	return nil
 }
 
-func (api *Api) getPublicationUsers() (*[]User, error) {
+func (api *Api) PublicationUsers() (*[]User, error) {
 	// Create a new request with stored cookies
 	req, err := http.NewRequest("GET", api.publicationURL+"/publication/users", nil)
 	if err != nil {
@@ -210,7 +219,7 @@ func (api *Api) getPublicationUsers() (*[]User, error) {
 	return &result, nil
 }
 
-func (api *Api) getPublication() (*Publication, error) {
+func (api *Api) Publication() (*Publication, error) {
 	req, err := http.NewRequest("GET", api.publicationURL+"/publication", nil)
 	if err != nil {
 		return nil, err
