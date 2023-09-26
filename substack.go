@@ -3,6 +3,7 @@ package substack
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -147,6 +148,20 @@ type Posts struct {
 	Total  int    `json:"total"`
 }
 
+type Category struct {
+	ID                     int    `json:"id"`
+	CreatedAt              string `json:"created_at"`
+	UpdatedAt              string `json:"updated_at"`
+	Name                   string `json:"name"`
+	CanonicalName          string `json:"canonical_name"`
+	Active                 bool   `json:"active"`
+	Rank                   int    `json:"rank"`
+	ParentTagID            int    `json:"parent_tag_id"`
+	Slug                   string `json:"slug"`
+	Emoji                  string `json:"emoji"`
+	LeaderboardDescription string `json:"leaderboard_description"`
+}
+
 func NewApi(email, password, publicationURL string) (*Api, error) {
 	api := &Api{session: &http.Client{}}
 	api.publicationURL = urljoin(publicationURL, "api/v1")
@@ -154,7 +169,7 @@ func NewApi(email, password, publicationURL string) (*Api, error) {
 	if email != "" && password != "" {
 		env, err := loadEnv(".env")
 		if err != nil {
-			fmt.Println("Unable to load .env file")
+			log.Println("Unable to load .env file")
 			env = make(map[string]string)
 			env["EMAIL"] = ""
 			env["PASSWORD"] = ""
@@ -181,10 +196,10 @@ func (api *Api) login(email, password string) error {
 	}
 
 	api.cookies = response.Cookies()
-	return api.handleResponse(response, nil)
+	return handleResponse(response, nil)
 }
 
-func (api *Api) handleResponse(response *http.Response, result interface{}) error {
+func handleResponse(response *http.Response, result interface{}) error {
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return fmt.Errorf("Substack API Error: %d - %s", response.StatusCode, response.Status)
 	}
@@ -211,7 +226,27 @@ func (api *Api) PublicationUsers() (*[]User, error) {
 	}
 
 	var result []User
-	err = api.handleResponse(response, &result)
+	err = handleResponse(response, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func GetPublication(publication string) (*Publication, error) {
+	publication = urljoin(publication, "api/v1")
+	req, err := http.NewRequest("GET", publication+"/publication", nil)
+	if err != nil {
+		return nil, err
+	}
+	response, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	var result Publication
+	err = handleResponse(response, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -220,25 +255,8 @@ func (api *Api) PublicationUsers() (*[]User, error) {
 }
 
 func (api *Api) Publication() (*Publication, error) {
-	req, err := http.NewRequest("GET", api.publicationURL+"/publication", nil)
-	if err != nil {
-		return nil, err
-	}
-	for _, cookie := range api.cookies {
-		req.AddCookie(cookie)
-	}
-	response, err := api.session.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var result Publication
-	err = api.handleResponse(response, &result)
-	if err != nil {
-		return nil, err
-	}
-
-	return &result, nil
+	api.publicationURL = urljoin(api.publicationURL, "api/v1")
+	return GetPublication(api.publicationURL)
 }
 
 func (api *Api) Posts() (*Posts, error) {
@@ -254,7 +272,63 @@ func (api *Api) Posts() (*Posts, error) {
 		return nil, err
 	}
 	result := Posts{}
-	err = api.handleResponse(response, &result)
+	err = handleResponse(response, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (api *Api) Drafts() (*Posts, error) {
+	req, err := http.NewRequest("GET", api.publicationURL+"/post_management/published?offset=0&limit=25&order_by=post_date&order_direction=desc", nil)
+	if err != nil {
+		return nil, err
+	}
+	for _, cookie := range api.cookies {
+		req.AddCookie(cookie)
+	}
+	response, err := api.session.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	result := Posts{}
+	err = handleResponse(response, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func PublicationPosts(publication string) (*Posts, error) {
+	publication = urljoin(publication, "api/v1")
+	req, err := http.NewRequest("GET", publication+"/posts", nil)
+	if err != nil {
+		return nil, err
+	}
+	response, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	result := Posts{}
+	err = handleResponse(response, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func PublicationCategories(publication string) (*[]Category, error) {
+	publication = urljoin(publication, "api/v1")
+	req, err := http.NewRequest("GET", publication+"/categories", nil)
+	if err != nil {
+		return nil, err
+	}
+	response, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	result := []Category{}
+	err = handleResponse(response, &result)
 	if err != nil {
 		return nil, err
 	}

@@ -8,7 +8,7 @@ import (
 
 func main() {
 	publicationURL := "https://meetgor.substack.com"
-	client, err := substack.NewApi("", "", publicationURL)
+	client, err := substack.NewApi("email@example.com", "supersecret", publicationURL)
 	if err != nil {
 		log.Fatalf("Error creating API client: %v", err)
 	}
