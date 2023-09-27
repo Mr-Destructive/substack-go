@@ -162,11 +162,37 @@ type Category struct {
 	LeaderboardDescription string `json:"leaderboard_description"`
 }
 
+type Subscription struct {
+	ID                     int    `json:"id"`
+	UserID                 int    `json:"user_id"`
+	PublicationID          int    `json:"publication_id"`
+	Expiry                 string `json:"expiry"`
+	EmailDisabled          bool   `json:"email_disabled"`
+	DigestEnabled          bool   `json:"digest_enabled"`
+	MembershipState        string `json:"membership_state"`
+	Type                   string `json:"type"`
+	GiftUserID             int    `json:"gift_user_id"`
+	CreatedAt              string `json:"created_at"`
+	GiftedAt               string `json:"gifted_at"`
+	Paused                 string `json:"paused"`
+	IsGroupParent          bool   `json:"is_group_parent"`
+	Visibility             string `json:"visibility"`
+	IsFounding             bool   `json:"is_founding"`
+	IsFavorite             bool   `json:"is_favorite"`
+	PodcastRSSToken        string `json:"podcast_rss_token"`
+	EmailSettings          string `json:"email_settings"`
+	SectionPodcastsEnabled string `json:"section_podcasts_enabled"`
+}
+
+type SubscriptionsList struct {
+	Subscriptions []Subscription `json:"subscriptions"`
+}
+
 func NewApi(email, password, publicationURL string) (*Api, error) {
 	api := &Api{session: &http.Client{}}
 	api.publicationURL = urljoin(publicationURL, "api/v1")
 
-	if email != "" && password != "" {
+	if email == "" && password == "" {
 		env, err := loadEnv(".env")
 		if err != nil {
 			log.Println("Unable to load .env file")
@@ -181,7 +207,6 @@ func NewApi(email, password, publicationURL string) (*Api, error) {
 			return nil, err
 		}
 	}
-
 	return api, nil
 }
 
@@ -251,6 +276,24 @@ func GetPublication(publication string) (*Publication, error) {
 		return nil, err
 	}
 
+	return &result, nil
+}
+
+func GetSubscriptions(publication string) (*SubscriptionsList, error) {
+	publication = urljoin(publication, "api/v1")
+	req, err := http.NewRequest("GET", publication+"/subscriptions", nil)
+	if err != nil {
+		return nil, err
+	}
+	response, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	var result SubscriptionsList
+	err = handleResponse(response, &result)
+	if err != nil {
+		return nil, err
+	}
 	return &result, nil
 }
 
